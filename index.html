@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
 <title>Vraag en antwoord</title>
 
 <style>
@@ -134,9 +136,8 @@ display:none;
 
 <label>
 Laad CSV bestand:
-<input type="file" id="csvFile">
-</label>
-
+<input id="csvUrl" placeholder="Plak hier de OneDrive CSV-link">
+<button id="saveUrl">opslaan</button>
 <button id="downloadTemplate">Voorbeeld CSV downloaden</button>
 
 <label>
@@ -211,6 +212,42 @@ synth.speak(u)
 
 
 // DATA
+async function loadRemoteExcel(url){
+
+if(!url) return
+
+try{
+
+const response = await fetch(url)
+
+if(!response.ok) throw new Error("Download failed")
+
+const arrayBuffer = await response.arrayBuffer()
+
+const workbook = XLSX.read(arrayBuffer,{type:"array"})
+
+const sheetName = workbook.SheetNames[0]
+
+const worksheet = workbook.Sheets[sheetName]
+
+const json = XLSX.utils.sheet_to_json(worksheet,{header:1})
+
+let sentences = parseExcel(json)
+
+displaySentences(sentences)
+
+}
+catch(err){
+
+console.error("Excel load error:",err)
+
+alert("Excel betöltése nem sikerült.")
+
+}
+
+}
+
+
 
 let sentenceList=[]
 
@@ -336,32 +373,24 @@ originalIndex:index
 
 }
 
+// ECEL
 
-// LOAD FILE
+function parseExcel(rows){
 
-function handleFileInput(file){
+rows = rows.slice(1)
 
-if(!file)return
+return rows.map((row,index)=>{
 
-const reader=new FileReader()
-
-reader.onload=function(ev){
-
-let sentences=parseCSV(ev.target.result)
-
-applySort(sentences)
-
-displaySentences(sentences)
-
+return{
+question:row[0] || "",
+hulp:row[1] || "",
+answer:row[2] || "",
+originalIndex:index
 }
 
-reader.readAsText(file)
+})
 
 }
-
-document.getElementById("csvFile")
-.addEventListener("change",e=>handleFileInput(e.target.files[0]))
-
 
 // SORT
 
@@ -393,19 +422,29 @@ displaySentences(sorted)
 
 })
 
+// LOAD EXCEL
+
+document.addEventListener("DOMContentLoaded",function(){
+
+const excelUrl =
+"https://cvocrescendo-my.sharepoint.com/:x:/g/personal/676057_crescendo-cvo_be/IQCmuRjc9JHkRb2wU6fPJTaSAR9WVSVDT633rcP6i5E9IEo?e=eI4cya"
+
+loadRemoteExcel(excelUrl)
+
+})
 
 // AUTOLOAD
 
-fetch("qa.csv")
-.then(r=>r.text())
-.then(text=>{
+// fetch("qa.csv")
+// .then(r=>r.text())
+// .then(text=>{
 
-let sentences=parseCSV(text)
+// let sentences=parseCSV(text)
 
-displaySentences(sentences)
+// displaySentences(sentences)
 
-})
-.catch(()=>{})
+// })
+// .catch(()=>{})
 
 </script>
 
