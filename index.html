@@ -3,131 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
 <title>Vraag en antwoord</title>
 
 <style>
-
 body{
 font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;
 padding:20px;
 background:#f4f6f8;
 color:#333;
 }
-
-h2{
-margin-bottom:15px;
-font-weight:600;
-}
-
-.controls{
-display:flex;
-flex-wrap:wrap;
-gap:10px;
-margin-bottom:20px;
-}
-
-button,input,select{
-padding:8px 14px;
-font-size:16px;
-border-radius:6px;
-border:1px solid #ccc;
-cursor:pointer;
-background:#fff;
-transition:0.2s;
-}
-
-button:hover,input:hover,select:hover{
-border-color:#a7cbbc;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-background:#fff;
-box-shadow:0 2px 6px rgba(0,0,0,0.1);
-}
-
-thead{
-position:sticky;
-top:0;
-z-index:20;
-}
-
-thead th{
-background:#a7cbbc;
-color:#fff;
-padding:12px 15px;
-text-align:left;
-}
-
-tbody td{
-padding:12px 15px;
-border-bottom:1px solid #eee;
-vertical-align:top;
-}
-
-.question{
-cursor:pointer;
-}
-
-.hulp{
-color:#666;
-font-size:14px;
-}
-
-.answer-wrapper{
-display:flex;
-align-items:flex-start;
-gap:8px;
-}
-
-.answer{
-visibility:hidden;
-}
-
-.answer.visible{
-visibility:visible;
-}
-
-.toggle-btn{
-font-size:12px;
-padding:2px 8px;
-border:1px solid #bbb;
-background:#f3f3f3;
-border-radius:4px;
-cursor:pointer;
-color:#444;
-}
-
-.toggle-btn:hover{
-background:#e8e8e8;
-}
-
+h2{margin-bottom:15px;font-weight:600;}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px;}
+button,input,select{padding:8px 14px;font-size:16px;border-radius:6px;border:1px solid #ccc;cursor:pointer;background:#fff;transition:0.2s;}
+button:hover,input:hover,select:hover{border-color:#a7cbbc;}
+table{width:100%;border-collapse:collapse;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.1);}
+thead{position:sticky;top:0;z-index:20;}
+thead th{background:#a7cbbc;color:#fff;padding:12px 15px;text-align:left;}
+tbody td{padding:12px 15px;border-bottom:1px solid #eee;vertical-align:top;}
+.question{cursor:pointer;}
+.hulp{color:#666;font-size:14px;}
+.answer-wrapper{display:flex;align-items:flex-start;gap:8px;}
+.answer{visibility:hidden;}
+.answer.visible{visibility:visible;}
+.toggle-btn{font-size:12px;padding:2px 8px;border:1px solid #bbb;background:#f3f3f3;border-radius:4px;cursor:pointer;color:#444;}
+.toggle-btn:hover{background:#e8e8e8;}
 @media (max-width:600px){
-
-tbody tr{
-display:block;
-margin-bottom:10px;
+tbody tr{display:block;margin-bottom:10px;}
+tbody td{display:block;width:100%;padding:10px;}
+thead{display:none;}
 }
-
-tbody td{
-display:block;
-width:100%;
-padding:10px;
-}
-
-thead{
-display:none;
-}
-
-}
-
 </style>
-</head>
 
+<!-- SheetJS XLSX library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+</head>
 <body>
 
 <h2>Vraag en antwoord</h2>
@@ -135,9 +45,10 @@ display:none;
 <div class="controls">
 
 <label>
-Laad CSV bestand:
-<input id="csvUrl" placeholder="Plak hier de OneDrive CSV-link">
-<button id="saveUrl">opslaan</button>
+Laad CSV of XLSX bestand:
+<input type="file" id="csvFile" accept=".csv,.xlsx">
+</label>
+
 <button id="downloadTemplate">Voorbeeld CSV downloaden</button>
 
 <label>
@@ -152,7 +63,6 @@ Sorteren:
 </div>
 
 <table id="sentenceTable">
-
 <thead>
 <tr>
 <th>Vraag</th>
@@ -160,292 +70,164 @@ Sorteren:
 <th>Antwoord</th>
 </tr>
 </thead>
-
 <tbody></tbody>
-
 </table>
 
 <script>
-
 // TTS
-
-let selectedVoice=null
-const synth=window.speechSynthesis
+let selectedVoice=null;
+const synth=window.speechSynthesis;
 
 function detectDutchVoice(){
-
-const voices=synth.getVoices()
-
-if(!voices.length)return
-
-let voice=
-voices.find(v=>v.lang==="nl-BE")||
-voices.find(v=>v.lang==="nl-NL")||
-voices.find(v=>v.lang.toLowerCase().startsWith("nl"))
-
-if(voice)selectedVoice=voice
-
+const voices=synth.getVoices();
+if(!voices.length) return;
+let voice=voices.find(v=>v.lang==="nl-BE")||voices.find(v=>v.lang==="nl-NL")||voices.find(v=>v.lang.toLowerCase().startsWith("nl"));
+if(voice) selectedVoice=voice;
 }
 
 if(speechSynthesis.onvoiceschanged!==undefined){
-speechSynthesis.onvoiceschanged=detectDutchVoice
+speechSynthesis.onvoiceschanged=detectDutchVoice;
 }
-
-detectDutchVoice()
+detectDutchVoice();
 
 function speak(text){
-
-if(!text)return
-
-const u=new SpeechSynthesisUtterance(text)
-
-u.lang=selectedVoice?.lang||"nl-NL"
-
-if(selectedVoice)u.voice=selectedVoice
-
-u.pitch=1
-u.rate=0.8
-
-synth.speak(u)
-
+if(!text) return;
+const u=new SpeechSynthesisUtterance(text);
+u.lang=selectedVoice?.lang||"nl-NL";
+if(selectedVoice) u.voice=selectedVoice;
+u.pitch=1; u.rate=0.8;
+synth.speak(u);
 }
-
 
 // DATA
-async function loadRemoteExcel(url){
-
-if(!url) return
-
-try{
-
-const response = await fetch(url)
-
-if(!response.ok) throw new Error("Download failed")
-
-const arrayBuffer = await response.arrayBuffer()
-
-const workbook = XLSX.read(arrayBuffer,{type:"array"})
-
-const sheetName = workbook.SheetNames[0]
-
-const worksheet = workbook.Sheets[sheetName]
-
-const json = XLSX.utils.sheet_to_json(worksheet,{header:1})
-
-let sentences = parseExcel(json)
-
-displaySentences(sentences)
-
-}
-catch(err){
-
-console.error("Excel load error:",err)
-
-alert("Excel betöltése nem sikerült.")
-
-}
-
-}
-
-
-
-let sentenceList=[]
+let sentenceList=[];
 
 function shuffleArray(arr){
-
 for(let i = arr.length - 1; i > 0; i--){
-
-let j = Math.floor(Math.random() * (i + 1))
-
-let temp = arr[i]
-arr[i] = arr[j]
-arr[j] = temp
-
+let j = Math.floor(Math.random() * (i + 1));
+let temp = arr[i]; arr[i] = arr[j]; arr[j] = temp;
 }
-
 }
 
 // TABLE
-
 function displaySentences(sentences){
-
-const tbody=document.querySelector("#sentenceTable tbody")
-
-tbody.innerHTML=""
-
-sentenceList=sentences
-
+const tbody=document.querySelector("#sentenceTable tbody");
+tbody.innerHTML="";
+sentenceList=sentences;
 sentences.forEach(s=>{
-
-const tr=document.createElement("tr")
+const tr=document.createElement("tr");
 
 // QUESTION
-
-const tdQ=document.createElement("td")
-
-const q=document.createElement("span")
-
-q.className="question"
-q.textContent=s.question
-
-q.addEventListener("click",()=>speak(s.question))
-
-tdQ.appendChild(q)
-
-tr.appendChild(tdQ)
-
+const tdQ=document.createElement("td");
+const q=document.createElement("span");
+q.className="question"; q.textContent=s.question;
+q.addEventListener("click",()=>speak(s.question));
+tdQ.appendChild(q); tr.appendChild(tdQ);
 
 // HULP
-
-const tdH=document.createElement("td")
-
-tdH.className="hulp"
-tdH.textContent=s.hulp
-
-tr.appendChild(tdH)
-
+const tdH=document.createElement("td");
+tdH.className="hulp"; tdH.textContent=s.hulp;
+tr.appendChild(tdH);
 
 // ANSWER
-
-const tdA=document.createElement("td")
-
-const wrapper=document.createElement("div")
-wrapper.className="answer-wrapper"
-
-const toggle=document.createElement("button")
-toggle.className="toggle-btn"
-toggle.textContent="toon"
-
-const answer=document.createElement("span")
-answer.className="answer"
-answer.textContent=s.answer
-
-answer.addEventListener("click",()=>speak(s.answer))
-
+const tdA=document.createElement("td");
+const wrapper=document.createElement("div"); wrapper.className="answer-wrapper";
+const toggle=document.createElement("button"); toggle.className="toggle-btn"; toggle.textContent="toon";
+const answer=document.createElement("span"); answer.className="answer"; answer.textContent=s.answer;
+answer.addEventListener("click",()=>speak(s.answer));
 toggle.addEventListener("click",()=>{
+if(answer.classList.contains("visible")){answer.classList.remove("visible"); toggle.textContent="toon";}
+else{answer.classList.add("visible"); toggle.textContent="verberg";}
+});
+wrapper.appendChild(toggle); wrapper.appendChild(answer);
+tdA.appendChild(wrapper);
+tr.appendChild(tdA);
 
-if(answer.classList.contains("visible")){
-answer.classList.remove("visible")
-toggle.textContent="toon"
-}else{
-answer.classList.add("visible")
-toggle.textContent="verberg"
+tbody.appendChild(tr);
+});
 }
-
-})
-
-wrapper.appendChild(toggle)
-wrapper.appendChild(answer)
-
-tdA.appendChild(wrapper)
-
-tr.appendChild(tdA)
-
-tbody.appendChild(tr)
-
-})
-
-}
-
 
 // CSV
-
 function parseCSV(text){
-
-let lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l)
-
-lines=lines.slice(1)
-
+let lines=text.split(/\r?\n/).map(l=>l.trim()).filter(l=>l);
+lines=lines.slice(1);
 return lines.map((line,index)=>{
-
-let parts=line.includes('\t')?line.split('\t'):line.split(';')
-
-parts=parts.map(p=>p.trim())
-
+let parts=line.includes('\t')?line.split('\t'):line.split(';');
+parts=parts.map(p=>p.trim());
 return{
 question:parts[0]||"",
 hulp:parts[1]||"",
 answer:parts[2]||"",
 originalIndex:index
+};
+});
 }
 
-})
-
+// XLSX
+function parseXLSX(file, callback){
+const reader=new FileReader();
+reader.onload=function(e){
+const data=new Uint8Array(e.target.result);
+const workbook=XLSX.read(data,{type:'array'});
+const firstSheetName=workbook.SheetNames[0];
+const worksheet=workbook.Sheets[firstSheetName];
+const json=XLSX.utils.sheet_to_json(worksheet,{header:1}); // 2D array
+const sentences=json.slice(1).map((row,index)=>({
+question: row[0] || "",
+hulp: row[1] || "",
+answer: row[2] || "",
+originalIndex: index
+}));
+callback(sentences);
+};
+reader.readAsArrayBuffer(file);
 }
 
-// ECEL
-
-function parseExcel(rows){
-
-rows = rows.slice(1)
-
-return rows.map((row,index)=>{
-
-return{
-question:row[0] || "",
-hulp:row[1] || "",
-answer:row[2] || "",
-originalIndex:index
+// LOAD FILE
+function handleFileInput(file){
+if(!file) return;
+if(file.name.endsWith(".csv")){
+const reader=new FileReader();
+reader.onload=function(ev){
+let sentences=parseCSV(ev.target.result);
+applySort(sentences);
+displaySentences(sentences);
+};
+reader.readAsText(file);
+}else if(file.name.endsWith(".xlsx")){
+parseXLSX(file,function(sentences){
+applySort(sentences);
+displaySentences(sentences);
+});
+}else{
+alert("Alleen CSV of XLSX bestanden zijn toegestaan.");
+}
 }
 
-})
-
-}
+document.getElementById("csvFile").addEventListener("change",e=>handleFileInput(e.target.files[0]));
 
 // SORT
-
 function applySort(arr){
-
-const mode=document.getElementById("sortSelector").value
-
-if(mode==="original")
-arr.sort((a,b)=>a.originalIndex-b.originalIndex)
-
-else if(mode==="abc")
-arr.sort((a,b)=>a.question.localeCompare(b.question,'nl'))
-
-else if(mode==="random")
-shuffleArray(arr)
-
+const mode=document.getElementById("sortSelector").value;
+if(mode==="original") arr.sort((a,b)=>a.originalIndex-b.originalIndex);
+else if(mode==="abc") arr.sort((a,b)=>a.question.localeCompare(b.question,'nl'));
+else if(mode==="random") shuffleArray(arr);
 }
-
-document.getElementById("sortSelector")
-.addEventListener("change",()=>{
-
-if(!sentenceList.length)return
-
-let sorted=[...sentenceList]
-
-applySort(sorted)
-
-displaySentences(sorted)
-
-})
-
-// LOAD EXCEL
-
-document.addEventListener("DOMContentLoaded",function(){
-
-const excelUrl =
-"https://cvocrescendo-my.sharepoint.com/personal/676057_crescendo-cvo_be/Documents/QA.xlsx"
-
-loadRemoteExcel(excelUrl)
-
-})
+document.getElementById("sortSelector").addEventListener("change",()=>{
+if(!sentenceList.length) return;
+let sorted=[...sentenceList];
+applySort(sorted);
+displaySentences(sorted);
+});
 
 // AUTOLOAD
-
-// fetch("qa.csv")
-// .then(r=>r.text())
-// .then(text=>{
-
-// let sentences=parseCSV(text)
-
-// displaySentences(sentences)
-
-// })
-// .catch(()=>{})
-
+fetch("qa.csv")
+.then(r=>r.text())
+.then(text=>{
+let sentences=parseCSV(text);
+displaySentences(sentences);
+})
+.catch(()=>{});
 </script>
 
 </body>
